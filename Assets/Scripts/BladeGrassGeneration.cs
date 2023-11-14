@@ -4,12 +4,17 @@ using UnityEngine;
 
 public class BladeGrassGeneration : MonoBehaviour
 {
+    [Header("Properties")]
+    public int dimension;
+    private Vector2 offset;
+    public float height;
+    public float curveOffset;
+
+    [Header("Instancing")]
     public Mesh mesh;
     public Shader shader;
     public ComputeShader computeShader;
     private Material mat;
-
-    public int dimension;
 
     private int instanceCount;
     private Vector3[] positionBufferData;
@@ -19,19 +24,10 @@ public class BladeGrassGeneration : MonoBehaviour
     void Start()
     {
         instanceCount = dimension * dimension;
+        Vector3 bounds = GetComponent<MeshRenderer>().bounds.size;
+        offset = new Vector2(dimension / bounds.x, dimension / bounds.z);
 
-        const int boundSize = 10;
-        Vector2 offset = new Vector2(dimension / boundSize, dimension / boundSize);
-
-        positionBufferData = new Vector3[instanceCount];
-        positionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 3);
-        positionBuffer.SetData(positionBufferData);
-        computeShader.SetBuffer(0, "_Positions", positionBuffer);
-        computeShader.SetInt("_Dimension", dimension);
-        computeShader.SetVector("_PlacementOffset", offset);
-
-        mat = new Material(shader);
-        mat.SetBuffer("_Positions", positionBuffer);
+        InitializeComputeShader();
     }
 
     // Update is called once per frame
@@ -43,7 +39,33 @@ public class BladeGrassGeneration : MonoBehaviour
     private void LateUpdate()
     {
         mat.SetBuffer("_Positions", positionBuffer);
+
+        mat.SetFloat("_Height", height);
+        mat.SetFloat("_Offset", curveOffset);
         Graphics.DrawMeshInstancedProcedural(mesh, 0, mat, new Bounds(Vector3.zero, new Vector3(100, 100, 100)), instanceCount);
+    }
+
+    private void InitializeComputeShader()
+    {
+        // Initialize data
+        positionBufferData = new Vector3[instanceCount];
+
+        // Initialize buffers
+        positionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 3);
+
+        // Set data to buffers
+        positionBuffer.SetData(positionBufferData);
+
+        // Set compute buffers to compute shader
+        computeShader.SetBuffer(0, "_Positions", positionBuffer);
+
+        // Run simulation step
+        computeShader.SetInt("_Dimension", dimension);
+        computeShader.SetVector("_PlacementOffset", offset);
+
+        // Create new material for gpu instancing
+        mat = new Material(shader);
+        mat.SetBuffer("_Positions", positionBuffer);
     }
 
     private void OnDestroy()

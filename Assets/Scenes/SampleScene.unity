@@ -468,10 +468,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02bd9a37cd2b5054fb0809e5ed3c892f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  dimension: 32
+  height: 0.01
+  curveOffset: 0.03
   mesh: {fileID: 8254687373856176130, guid: 0dd94e2dc6b2bd143b1b8057cd13ea7c, type: 3}
   shader: {fileID: 4800000, guid: 38acc35ada14c5c4e8fd1191d7d1899b, type: 3}
   computeShader: {fileID: 7200000, guid: 97e30b1b78d85164ca68d74bb209713a, type: 3}
-  dimension: 30
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

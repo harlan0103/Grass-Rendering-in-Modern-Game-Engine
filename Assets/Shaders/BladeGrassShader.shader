@@ -35,6 +35,10 @@ Shader"Unlit/BladeGrassShader"
             sampler2D _MainTex;
             float4 _MainTex_ST;
 
+            // Properties
+            float _Height;
+            float _Offset;
+
             // Compute shader
             StructuredBuffer<float3> _Positions;
 
@@ -53,13 +57,32 @@ Shader"Unlit/BladeGrassShader"
                 );
             }
 
+            // A quadratic bezier curve function
+            float2 quadraticBezierCurve(float3 p0, float3 p1, float3 p2, float t)
+            {
+                float a = (1 - t) * (1 - t);
+                float b = 2 * (1 - t) * t;
+                float c = t * t;
+
+                float x = a * p0.x + b * p1.x + c * p2.x;
+                float y = a * p0.y + b * p1.y + c * p2.y;
+
+                return float2(x, y);
+            }
+
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
             {
+                // Bezier curve
+                float3 p0 = float3(0.0, 0.0, 0.0);
+                float3 p1 = float3(0.0, _Height, 0.0);
+                float3 p2 = float3( _Offset, _Height, 0.0);
+
+                float3 curvePoint = float3(quadraticBezierCurve(p0, p1, p2, v.uv.y), 0.0);
                 float3 spawnPos = float3(_Positions[instanceID]);
 
                 float randomAngle = rand(spawnPos.xz) * 360.0;
                 float4x4 rotateMatrix = RotateY(randomAngle);
-                float3 rotateVertex = mul(rotateMatrix, v.vertex);
+                float3 rotateVertex = mul(rotateMatrix, v.vertex + curvePoint); 
                 
 				float3 worldVertPos = spawnPos + mul(unity_ObjectToWorld, rotateVertex * 10.0);
 				float3 objectVertPos = mul(unity_WorldToObject, float4(worldVertPos.xyz, 1));
