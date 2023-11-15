@@ -9,12 +9,15 @@ public class BladeGrassGeneration : MonoBehaviour
     private Vector2 offset;
     public float height;
     public float curveOffset;
+    public float sideOffsetAmount;
 
     [Header("Instancing")]
     public Mesh mesh;
     public Shader shader;
     public ComputeShader computeShader;
     private Material mat;
+    public float shadingOffset = 1.2f;
+    public float shadingParameter = 1.4f;
 
     private int instanceCount;
     private Vector3[] positionBufferData;
@@ -42,6 +45,9 @@ public class BladeGrassGeneration : MonoBehaviour
 
         mat.SetFloat("_Height", height);
         mat.SetFloat("_Offset", curveOffset);
+        mat.SetFloat("_SideOffsetAmount", sideOffsetAmount);
+        mat.SetFloat("_ShadingOffset", shadingOffset);
+        mat.SetFloat("_ShadingParameter", shadingParameter);
         Graphics.DrawMeshInstancedProcedural(mesh, 0, mat, new Bounds(Vector3.zero, new Vector3(100, 100, 100)), instanceCount);
     }
 
