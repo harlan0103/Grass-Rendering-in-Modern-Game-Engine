@@ -11,6 +11,9 @@ float3 _CamPosInWorldSpace;
 float _DistanceCullingThreshold;
 uint _Dimension;
 float2 _PlacementOffset;
+float3 _InitialPos;
+float4x4 _CamClippingMatrix;
+float _NearPlaneOffset;
 
 float Clamp(float min, float max, float target)
 {
@@ -44,6 +47,25 @@ uint DistanceCulling(float3 worldPos)
     }
 }
 
+uint FrustumCulling(float4 clippingPos)
+{
+    // The size of clipping space is about [-clippingPos.w, clippingPos.w]
+    // Only need to check if x y z values are inside the range
+    
+    bool isOutsideFarNearPlane = clippingPos.z > clippingPos.w || clippingPos.z < -clippingPos.w;
+    bool isOutsideLeftRightPlane = clippingPos.x < -clippingPos.w || clippingPos.x > clippingPos.w;
+    bool isOutsideBottomTopPlane = clippingPos.y < -clippingPos.w + -_NearPlaneOffset || clippingPos.y > clippingPos.w;
+
+    if (isOutsideFarNearPlane || isOutsideLeftRightPlane || isOutsideBottomTopPlane)
+    {
+        return 0; // The point is outside the frustum
+    }
+    else
+    {
+        return 1; // The point is inside the frustum
+    }
+}
+
 [numthreads(8, 8, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
@@ -52,16 +74,23 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         return;
     }
     
-    uint pos = id.x + id.y * _Dimension;
-    float randomOffset = Clamp(0.0, 0.99, snoise(id) * 0.3);
+    float randomOffset = Clamp(0.0, 0.99, (snoise(id) * 0.3));
 
     float spawnX = (id.x / _PlacementOffset.x) + randomOffset;
     float spawnZ = (id.y / _PlacementOffset.y) + randomOffset;
     
-    uint distanceCulling = DistanceCulling(float3(spawnX, 0.05f, spawnZ));
+    // Correct each position
+    float3 finalPos = float3(spawnX, 0.05f, spawnZ);
+    float3 revisedPos = _InitialPos + finalPos;
+    
+    uint distanceCulling = DistanceCulling(revisedPos);
+    
+    // Calculate for frustum culling
+    float4 clippingSpacePos = mul(_CamClippingMatrix, float4(revisedPos, 1.0));
+    uint frustumCulling = FrustumCulling(clippingSpacePos);
 
-    if (distanceCulling == 1)
+    if (distanceCulling == 1 && frustumCulling == 1)
     {
-        _Positions.Append(float3(spawnX, 0.05f, spawnZ));
+        _Positions.Append(revisedPos);
     }
 }

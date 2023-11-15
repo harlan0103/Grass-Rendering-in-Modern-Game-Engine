@@ -364,7 +364,7 @@ GameObject:
   - component: {fileID: 1981784893}
   - component: {fileID: 1981784897}
   m_Layer: 0
-  m_Name: Chunk
+  m_Name: Terrain
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -450,8 +450,8 @@ Transform:
   m_GameObject: {fileID: 1981784892}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 5, y: 0, z: 5}
-  m_LocalScale: {x: 10, y: 0.1, z: 10}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 100, y: 0.1, z: 100}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -469,16 +469,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCam: {fileID: 963194227}
-  dimension: 64
+  dimension: 640
   height: 0.3
   curveOffset: 0.4
   sideOffsetAmount: 1
-  distanceCullingThreshold: 15
   mesh: {fileID: 8254687373856176130, guid: 0dd94e2dc6b2bd143b1b8057cd13ea7c, type: 3}
   shader: {fileID: 4800000, guid: 38acc35ada14c5c4e8fd1191d7d1899b, type: 3}
   computeShader: {fileID: 7200000, guid: 97e30b1b78d85164ca68d74bb209713a, type: 3}
   shadingOffset: 2
   shadingParameter: 1.7
+  distanceCullingThreshold: 9999
+  frustumNearPlaneOffset: 2.5
   numGrassRendered: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
