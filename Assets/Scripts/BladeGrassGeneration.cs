@@ -4,12 +4,15 @@ using UnityEngine;
 
 public class BladeGrassGeneration : MonoBehaviour
 {
+    public Camera mainCam;    
+
     [Header("Properties")]
     public int dimension;
     private Vector2 offset;
     public float height;
     public float curveOffset;
     public float sideOffsetAmount;
+    public float distanceCullingThreshold;
 
     [Header("Instancing")]
     public Mesh mesh;
@@ -21,7 +24,14 @@ public class BladeGrassGeneration : MonoBehaviour
 
     private int instanceCount;
     private Vector3[] positionBufferData;
+    private int[] positionCntBufferData;
     private ComputeBuffer positionBuffer;
+    private ComputeBuffer positionCntBuffer;
+    
+    [Header("Debugging")]
+    public int numGrassRendered = 0;
+
+    private Vector3 camPosInWorldSpace;
 
     // Start is called before the first frame update
     void Start()
@@ -36,7 +46,7 @@ public class BladeGrassGeneration : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        computeShader.Dispatch(0, Mathf.CeilToInt(dimension / 8), Mathf.CeilToInt(dimension / 8), 1);
+        RunSimulationStep();
     }
 
     private void LateUpdate()
@@ -48,7 +58,13 @@ public class BladeGrassGeneration : MonoBehaviour
         mat.SetFloat("_SideOffsetAmount", sideOffsetAmount);
         mat.SetFloat("_ShadingOffset", shadingOffset);
         mat.SetFloat("_ShadingParameter", shadingParameter);
-        Graphics.DrawMeshInstancedProcedural(mesh, 0, mat, new Bounds(Vector3.zero, new Vector3(100, 100, 100)), instanceCount);
+
+        // Only render when there has grass in the scene
+        // numGrassRendered = 0 will cause out of range error
+        if (numGrassRendered > 0)
+        {
+            Graphics.DrawMeshInstancedProcedural(mesh, 0, mat, new Bounds(Vector3.zero, new Vector3(100, 100, 100)), numGrassRendered);
+        }
     }
 
     private void InitializeComputeShader()
@@ -57,10 +73,12 @@ public class BladeGrassGeneration : MonoBehaviour
         positionBufferData = new Vector3[instanceCount];
 
         // Initialize buffers
-        positionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 3);
+        positionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 3, ComputeBufferType.Append);
+        positionCntBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
+        positionCntBufferData = new int[1];
 
         // Set data to buffers
-        positionBuffer.SetData(positionBufferData);
+        //positionBuffer.SetData(positionBufferData);
 
         // Set compute buffers to compute shader
         computeShader.SetBuffer(0, "_Positions", positionBuffer);
@@ -74,8 +92,27 @@ public class BladeGrassGeneration : MonoBehaviour
         mat.SetBuffer("_Positions", positionBuffer);
     }
 
+    private void RunSimulationStep()
+    {
+        positionBuffer.SetCounterValue(0);
+
+        // Get the updated camera position in world space
+        camPosInWorldSpace = mainCam.transform.position;
+        computeShader.SetVector("_CamPosInWorldSpace", camPosInWorldSpace);
+
+        computeShader.SetFloat("_DistanceCullingThreshold", distanceCullingThreshold);
+
+        computeShader.Dispatch(0, Mathf.CeilToInt(dimension / 8), Mathf.CeilToInt(dimension / 8), 1);
+
+        // Update count number
+        ComputeBuffer.CopyCount(positionBuffer, positionCntBuffer, 0);
+        positionCntBuffer.GetData(positionCntBufferData);
+        numGrassRendered = positionCntBufferData[0];
+    }
+
     private void OnDestroy()
     {
         positionBuffer.Release();
+        positionCntBuffer.Release();
     }
 }

@@ -5,12 +5,14 @@
 
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-RWStructuredBuffer<float3> _Positions;
+AppendStructuredBuffer<float3> _Positions;
 
+float3 _CamPosInWorldSpace;
+float _DistanceCullingThreshold;
 uint _Dimension;
 float2 _PlacementOffset;
 
-float clamp(float min, float max, float target)
+float Clamp(float min, float max, float target)
 {
     if (target < min)
     {
@@ -23,6 +25,25 @@ float clamp(float min, float max, float target)
     return target;
 }
 
+uint DistanceCulling(float3 worldPos)
+{
+    // Get the world position of current grass instance
+    // Get the world position of main camera
+    // Calculate the distance between two positions
+    // Cull if distance exeeds the threshold
+    
+    float d = distance(worldPos, _CamPosInWorldSpace);
+    
+    if (d <= _DistanceCullingThreshold)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 [numthreads(8, 8, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
@@ -32,10 +53,15 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     }
     
     uint pos = id.x + id.y * _Dimension;
-    float randomOffset = clamp(0.0, 0.99, snoise(id) * 0.3);
+    float randomOffset = Clamp(0.0, 0.99, snoise(id) * 0.3);
 
     float spawnX = (id.x / _PlacementOffset.x) + randomOffset;
     float spawnZ = (id.y / _PlacementOffset.y) + randomOffset;
+    
+    uint distanceCulling = DistanceCulling(float3(spawnX, 0.05f, spawnZ));
 
-    _Positions[pos] = float3(spawnX, 0.05f, spawnZ);
+    if (distanceCulling == 1)
+    {
+        _Positions.Append(float3(spawnX, 0.05f, spawnZ));
+    }
 }

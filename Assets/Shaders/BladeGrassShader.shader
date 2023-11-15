@@ -86,7 +86,8 @@ Shader"Unlit/BladeGrassShader"
             v2f vert (appdata v, uint instanceID : SV_InstanceID)
             {
                 v2f o;
-
+                UNITY_INITIALIZE_OUTPUT(v2f, o);
+                
                 v.vertex.xyz *= float3(10.0, 10.0, 10.0);
                 float3 spawnPos = float3(_Positions[instanceID]);
 
