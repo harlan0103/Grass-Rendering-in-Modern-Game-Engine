@@ -33,6 +33,7 @@ public class BladeGrassGeneration : MonoBehaviour
     public float height;
     public float curveOffset;
     public float sideOffsetAmount;
+    public Texture windTex;
 
     [Header("Instancing")]
     public Mesh mesh;
@@ -41,11 +42,13 @@ public class BladeGrassGeneration : MonoBehaviour
     private Material mat;
     public float shadingOffset = 1.2f;
     public float shadingParameter = 1.4f;
+    public float windStrength = 1.2f;
+    public Vector3 windDirection = Vector3.one;
 
     private int instanceCount;
-    private int[] positionCntBufferData;
-    private ComputeBuffer positionBuffer;
-    private ComputeBuffer positionCntBuffer;
+    private int[] bladeCntBufferData;
+    private ComputeBuffer bladeBuffer;
+    private ComputeBuffer bladeCntBuffer;
 
     [Header("Culling")]
     public float distanceCullingThreshold;
@@ -89,14 +92,13 @@ public class BladeGrassGeneration : MonoBehaviour
         instanceCount = dimension * dimension * totalChunksNumber;
         //Vector3 bounds = GetComponent<MeshRenderer>().bounds.size;
         offset = new Vector2((float)dimension / terrainChunkWidth, (float)dimension / terrainChunkWidth);
-        Debug.Log(offset);
         InitializeComputeShader();
     }
 
     // Update is called once per frame
     void Update()
     {
-        positionBuffer.SetCounterValue(0);
+        bladeBuffer.SetCounterValue(0);
         numGrassRendered = 0;
 
         // For now there will be only one chunk in the chunk list
@@ -111,13 +113,16 @@ public class BladeGrassGeneration : MonoBehaviour
 
     private void LateUpdate()
     {
-        mat.SetBuffer("_Positions", positionBuffer);
+        mat.SetBuffer("_BladeBuffer", bladeBuffer);
 
         mat.SetFloat("_Height", height);
         mat.SetFloat("_Offset", curveOffset);
         mat.SetFloat("_SideOffsetAmount", sideOffsetAmount);
         mat.SetFloat("_ShadingOffset", shadingOffset);
         mat.SetFloat("_ShadingParameter", shadingParameter);
+
+        mat.SetFloat("_WindForce", windStrength);
+        mat.SetVector("_WindDirection", windDirection);
 
         // Only render when there has grass in the scene
         // numGrassRendered = 0 will cause out of range error
@@ -127,36 +132,18 @@ public class BladeGrassGeneration : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmos()
-    {
-        if (terrainList == null || terrainList.Count == 0)
-        {
-            return;
-        }
-
-        for (int i = 0; i < terrainList.Count; i++)
-        {
-            float hash1 = Mathf.PerlinNoise(i * 0.1f, 0);
-            float hash2 = Mathf.PerlinNoise(0, i * 0.1f);
-            float hash3 = Mathf.PerlinNoise(i * 0.1f, i * 0.1f);
-
-            Gizmos.color = new Color(hash1, hash2, hash3);
-            Gizmos.DrawWireCube(terrainList[i].centroid, new Vector3(terrainList[i].width, 0.5f, terrainList[i].width));
-        }
-    }
-
     private void InitializeComputeShader()
     {
         // Initialize buffers
-        positionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 3, ComputeBufferType.Append);
-        positionCntBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
-        positionCntBufferData = new int[1];
+        bladeBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 4, ComputeBufferType.Append);
+        bladeCntBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
+        bladeCntBufferData = new int[1];
 
         // Set data to buffers
         //positionBuffer.SetData(positionBufferData);
 
         // Set compute buffers to compute shader
-        computeShader.SetBuffer(0, "_Positions", positionBuffer);
+        computeShader.SetBuffer(0, "_BladeGrassBuffer", bladeBuffer);
 
         // Run simulation step
         computeShader.SetInt("_Dimension", dimension);
@@ -164,7 +151,7 @@ public class BladeGrassGeneration : MonoBehaviour
 
         // Create new material for gpu instancing
         mat = new Material(shader);
-        mat.SetBuffer("_Positions", positionBuffer);
+        mat.SetBuffer("_BladeBuffer", bladeBuffer);
     }
 
     private void RunSimulationStep()
@@ -180,18 +167,20 @@ public class BladeGrassGeneration : MonoBehaviour
         computeShader.SetMatrix("_CamClippingMatrix", adjuestedClippingMatrix);
         computeShader.SetFloat("_DistanceCullingThreshold", distanceCullingThreshold);
         computeShader.SetFloat("_NearPlaneOffset", frustumNearPlaneOffset);
+        computeShader.SetTexture(0, "WindTex", windTex);
+        computeShader.SetVector("_Time", Shader.GetGlobalVector("_Time"));
 
         computeShader.Dispatch(0, Mathf.CeilToInt(dimension / 8), Mathf.CeilToInt(dimension / 8), 1);
 
         // Update count number
-        ComputeBuffer.CopyCount(positionBuffer, positionCntBuffer, 0);
-        positionCntBuffer.GetData(positionCntBufferData);
-        numGrassRendered += positionCntBufferData[0];
+        ComputeBuffer.CopyCount(bladeBuffer, bladeCntBuffer, 0);
+        bladeCntBuffer.GetData(bladeCntBufferData);
+        numGrassRendered += bladeCntBufferData[0];
     }
 
     private void OnDestroy()
     {
-        positionBuffer.Release();
-        positionCntBuffer.Release();
+        bladeBuffer.Release();
+        bladeCntBuffer.Release();
     }
 }

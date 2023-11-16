@@ -304,7 +304,7 @@ Transform:
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
   m_LocalRotation: {x: 0.13052616, y: 0, z: 0, w: 0.9914449}
-  m_LocalPosition: {x: 5, y: 3, z: -4}
+  m_LocalPosition: {x: 0.117, y: 4.175, z: -9.919}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -451,7 +451,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 100, y: 0.1, z: 100}
+  m_LocalScale: {x: 10, y: 0.1, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -469,15 +469,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mainCam: {fileID: 963194227}
-  dimension: 640
-  height: 0.3
-  curveOffset: 0.4
-  sideOffsetAmount: 1
+  dimension: 64
+  height: 0.02
+  curveOffset: 0.03
+  sideOffsetAmount: 0
+  windTex: {fileID: 2800000, guid: b91781014d4fb2a4e992886962ac9587, type: 3}
   mesh: {fileID: 8254687373856176130, guid: 0dd94e2dc6b2bd143b1b8057cd13ea7c, type: 3}
   shader: {fileID: 4800000, guid: 38acc35ada14c5c4e8fd1191d7d1899b, type: 3}
   computeShader: {fileID: 7200000, guid: 97e30b1b78d85164ca68d74bb209713a, type: 3}
   shadingOffset: 2
   shadingParameter: 1.7
+  windStrength: 0.26
+  windDirection: {x: 1.2, y: 0, z: 0.8}
   distanceCullingThreshold: 9999
   frustumNearPlaneOffset: 2.5
   numGrassRendered: 0

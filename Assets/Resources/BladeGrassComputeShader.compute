@@ -3,9 +3,15 @@
 
 #include "Simplex.compute"
 
+struct Blade
+{
+    float3 position;
+    float windOffset;
+};
+
 // Create a RenderTexture with enableRandomWrite flag and set it
 // with cs.SetTexture
-AppendStructuredBuffer<float3> _Positions;
+AppendStructuredBuffer<Blade> _BladeGrassBuffer;
 
 float3 _CamPosInWorldSpace;
 float _DistanceCullingThreshold;
@@ -14,6 +20,10 @@ float2 _PlacementOffset;
 float3 _InitialPos;
 float4x4 _CamClippingMatrix;
 float _NearPlaneOffset;
+float4 _Time;
+
+Texture2D WindTex;
+SamplerState samplerWindTex;
 
 float Clamp(float min, float max, float target)
 {
@@ -91,6 +101,16 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     if (distanceCulling == 1 && frustumCulling == 1)
     {
-        _Positions.Append(revisedPos);
+        // Calculate wind
+        float2 sampleUV = float2(revisedPos.x, revisedPos.z);
+        sampleUV += _Time.y * 0.12f;
+        
+        float windOffset = WindTex.SampleLevel(samplerWindTex, sampleUV, 0).x;
+        
+        Blade blade;
+        blade.position = revisedPos;
+        blade.windOffset = windOffset;
+        
+        _BladeGrassBuffer.Append(blade);
     }
 }
