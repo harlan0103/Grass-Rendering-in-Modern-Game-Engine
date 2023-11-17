@@ -19,6 +19,7 @@ public class BladeGrassGeneration : MonoBehaviour
 {
     public Camera mainCam;
     [Header("Terrain")]
+    public GameObject terrain;
 
     // For now terrainChunkWidth will be the same as the terrain size
     // It will be way faster in one compute shader calculation
@@ -43,16 +44,19 @@ public class BladeGrassGeneration : MonoBehaviour
     public float shadingOffset = 1.2f;
     public float shadingParameter = 1.4f;
     public float windStrength = 1.2f;
+    public float noiseOffset = -0.5f;
     public Vector3 windDirection = Vector3.one;
 
     private int instanceCount;
     private int[] bladeCntBufferData;
     private ComputeBuffer bladeBuffer;
     private ComputeBuffer bladeCntBuffer;
+    private ComputeBuffer heightMapBuffer;
 
     [Header("Culling")]
     public float distanceCullingThreshold;
     public float frustumNearPlaneOffset;
+    public float frustumEdgeOffset;
 
     [Header("Debugging")]
     public int numGrassRendered = 0;
@@ -63,7 +67,7 @@ public class BladeGrassGeneration : MonoBehaviour
     void Start()
     {
         // Terrain calculation
-        Vector3 terrainBounds = GetComponent<MeshRenderer>().bounds.size;
+        Vector3 terrainBounds = terrain.GetComponent<MeshRenderer>().bounds.size;
         terrainChunkWidth = (int)terrainBounds.x;       // TEMP
         int numOfChunkOnEachSide = (int)terrainBounds.x / terrainChunkWidth;
         int terrainSideSize = numOfChunkOnEachSide * terrainChunkWidth;
@@ -121,8 +125,10 @@ public class BladeGrassGeneration : MonoBehaviour
         mat.SetFloat("_ShadingOffset", shadingOffset);
         mat.SetFloat("_ShadingParameter", shadingParameter);
 
-        mat.SetFloat("_WindForce", windStrength);
+        mat.SetFloat("_WindSpeed", windStrength);
         mat.SetVector("_WindDirection", windDirection);
+        mat.SetTexture("_MainTex", windTex);
+        mat.SetFloat("_NoiseOffset", noiseOffset);
 
         // Only render when there has grass in the scene
         // numGrassRendered = 0 will cause out of range error
@@ -138,9 +144,6 @@ public class BladeGrassGeneration : MonoBehaviour
         bladeBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 4, ComputeBufferType.Append);
         bladeCntBuffer = new ComputeBuffer(1, sizeof(int), ComputeBufferType.Raw);
         bladeCntBufferData = new int[1];
-
-        // Set data to buffers
-        //positionBuffer.SetData(positionBufferData);
 
         // Set compute buffers to compute shader
         computeShader.SetBuffer(0, "_BladeGrassBuffer", bladeBuffer);
@@ -167,6 +170,7 @@ public class BladeGrassGeneration : MonoBehaviour
         computeShader.SetMatrix("_CamClippingMatrix", adjuestedClippingMatrix);
         computeShader.SetFloat("_DistanceCullingThreshold", distanceCullingThreshold);
         computeShader.SetFloat("_NearPlaneOffset", frustumNearPlaneOffset);
+        computeShader.SetFloat("_EdgeFrustumCullingOffset", frustumEdgeOffset);
         computeShader.SetTexture(0, "WindTex", windTex);
         computeShader.SetVector("_Time", Shader.GetGlobalVector("_Time"));
 

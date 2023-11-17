@@ -20,6 +20,7 @@ float2 _PlacementOffset;
 float3 _InitialPos;
 float4x4 _CamClippingMatrix;
 float _NearPlaneOffset;
+float _EdgeFrustumCullingOffset;
 float4 _Time;
 
 Texture2D WindTex;
@@ -63,7 +64,7 @@ uint FrustumCulling(float4 clippingPos)
     // Only need to check if x y z values are inside the range
     
     bool isOutsideFarNearPlane = clippingPos.z > clippingPos.w || clippingPos.z < -clippingPos.w;
-    bool isOutsideLeftRightPlane = clippingPos.x < -clippingPos.w || clippingPos.x > clippingPos.w;
+    bool isOutsideLeftRightPlane = clippingPos.x < -clippingPos.w + _EdgeFrustumCullingOffset || clippingPos.x > clippingPos.w - _EdgeFrustumCullingOffset;
     bool isOutsideBottomTopPlane = clippingPos.y < -clippingPos.w + -_NearPlaneOffset || clippingPos.y > clippingPos.w;
 
     if (isOutsideFarNearPlane || isOutsideLeftRightPlane || isOutsideBottomTopPlane)
@@ -89,7 +90,6 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     float spawnX = (id.x / _PlacementOffset.x) + randomOffset;
     float spawnZ = (id.y / _PlacementOffset.y) + randomOffset;
     
-    // Correct each position
     float3 finalPos = float3(spawnX, 0.05f, spawnZ);
     float3 revisedPos = _InitialPos + finalPos;
     
