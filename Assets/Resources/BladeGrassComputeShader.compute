@@ -22,9 +22,14 @@ float4x4 _CamClippingMatrix;
 float _NearPlaneOffset;
 float _EdgeFrustumCullingOffset;
 float4 _Time;
+float _HeightMultiplier;
+float _HeightMapSize;
 
 Texture2D WindTex;
 SamplerState samplerWindTex;
+
+Texture2D HeightTex;
+SamplerState samplerHeightTex;
 
 float Clamp(float min, float max, float target)
 {
@@ -89,11 +94,19 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     float spawnX = (id.x / _PlacementOffset.x) + randomOffset;
     float spawnZ = (id.y / _PlacementOffset.y) + randomOffset;
-    
-    float3 finalPos = float3(spawnX, 0.05f, spawnZ);
+
+    float3 finalPos = float3(spawnX, 0.0f, spawnZ);
     float3 revisedPos = _InitialPos + finalPos;
-    
     uint distanceCulling = DistanceCulling(revisedPos);
+    
+    float2 worldUV = float2(spawnX, spawnZ);
+    float2 heightMapUV = worldUV * (1 / _HeightMapSize);
+    clamp(0.0, 1.0, heightMapUV.x);
+    clamp(0.0, 1.0, heightMapUV.y);
+    
+    // Sample the height value
+    float heightOffset = HeightTex.SampleLevel(samplerHeightTex, heightMapUV, 0).x;
+    revisedPos.y += heightOffset * _HeightMultiplier;
     
     // Calculate for frustum culling
     float4 clippingSpacePos = mul(_CamClippingMatrix, float4(revisedPos, 1.0));
@@ -101,9 +114,9 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 
     if (distanceCulling == 1 && frustumCulling == 1)
     {
-        // Calculate wind
-        float2 sampleUV = float2(revisedPos.x, revisedPos.z);
-        sampleUV += _Time.y * 0.12f;
+        
+        // Sample wind using timed UV coordinate
+        float2 sampleUV = worldUV + _Time.y * 0.12f;
         
         float windOffset = WindTex.SampleLevel(samplerWindTex, sampleUV, 0).x;
         

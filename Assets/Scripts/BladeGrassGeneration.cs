@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+
 struct TerrainChunk 
 {
     public Vector3 centroid;
@@ -15,11 +16,21 @@ struct TerrainChunk
     }
 }
 
+[System.Serializable]
+public struct Blade
+{
+    public Vector3 position;
+    public float windOffset;
+}
+
 public class BladeGrassGeneration : MonoBehaviour
 {
     public Camera mainCam;
-    [Header("Terrain")]
+    [Header("Terrain Properties")]
     public GameObject terrain;
+    public Texture2D heightMap;
+    public float heightMultiplier;
+    public float heightMapScale;
 
     // For now terrainChunkWidth will be the same as the terrain size
     // It will be way faster in one compute shader calculation
@@ -28,7 +39,7 @@ public class BladeGrassGeneration : MonoBehaviour
 
     private List<TerrainChunk> terrainList;
 
-    [Header("Properties")]
+    [Header("Blade Grass Properties")]
     public int dimension;
     private Vector2 offset;
     public float height;
@@ -171,7 +182,10 @@ public class BladeGrassGeneration : MonoBehaviour
         computeShader.SetFloat("_DistanceCullingThreshold", distanceCullingThreshold);
         computeShader.SetFloat("_NearPlaneOffset", frustumNearPlaneOffset);
         computeShader.SetFloat("_EdgeFrustumCullingOffset", frustumEdgeOffset);
+        computeShader.SetFloat("_HeightMultiplier", heightMultiplier);
+        computeShader.SetFloat("_HeightMapSize", heightMapScale);
         computeShader.SetTexture(0, "WindTex", windTex);
+        computeShader.SetTexture(0, "HeightTex", heightMap);
         computeShader.SetVector("_Time", Shader.GetGlobalVector("_Time"));
 
         computeShader.Dispatch(0, Mathf.CeilToInt(dimension / 8), Mathf.CeilToInt(dimension / 8), 1);
