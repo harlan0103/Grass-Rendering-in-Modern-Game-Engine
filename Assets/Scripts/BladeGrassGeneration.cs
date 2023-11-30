@@ -27,10 +27,11 @@ public class BladeGrassGeneration : MonoBehaviour
 {
     public Camera mainCam;
     [Header("Terrain Properties")]
+    public MapGenerator mapGenerator;
     public GameObject terrain;
     public Texture2D heightMap;
-    public float heightMultiplier;
-    public float heightMapScale;
+    //public float heightMultiplier;
+    //public float heightMapScale;
 
     // For now terrainChunkWidth will be the same as the terrain size
     // It will be way faster in one compute shader calculation
@@ -65,9 +66,13 @@ public class BladeGrassGeneration : MonoBehaviour
     private ComputeBuffer heightMapBuffer;
 
     [Header("Culling")]
+    //public Camera renderCam;
+    //public RenderTexture depthRenderTex;
     public float distanceCullingThreshold;
     public float frustumNearPlaneOffset;
     public float frustumEdgeOffset;
+    public DepthTextureGenerator depthTextureGenerator;
+    public float occludeHeightOffset;
 
     [Header("Debugging")]
     public int numGrassRendered = 0;
@@ -182,10 +187,15 @@ public class BladeGrassGeneration : MonoBehaviour
         computeShader.SetFloat("_DistanceCullingThreshold", distanceCullingThreshold);
         computeShader.SetFloat("_NearPlaneOffset", frustumNearPlaneOffset);
         computeShader.SetFloat("_EdgeFrustumCullingOffset", frustumEdgeOffset);
-        computeShader.SetFloat("_HeightMultiplier", heightMultiplier);
-        computeShader.SetFloat("_HeightMapSize", heightMapScale);
+        computeShader.SetFloat("_HeightMultiplier", mapGenerator.heightMultiplier);
+        computeShader.SetFloat("_HeightMapSize", mapGenerator.terrainSize);
+        computeShader.SetInt("_DepthTexSize", depthTextureGenerator.GetTextureDimension());
+        computeShader.SetFloat("_OccludHeightOffset", occludeHeightOffset);
+        
         computeShader.SetTexture(0, "WindTex", windTex);
         computeShader.SetTexture(0, "HeightTex", heightMap);
+        computeShader.SetTexture(0, "DepthTex", depthTextureGenerator.renderTex);
+
         computeShader.SetVector("_Time", Shader.GetGlobalVector("_Time"));
 
         computeShader.Dispatch(0, Mathf.CeilToInt(dimension / 8), Mathf.CeilToInt(dimension / 8), 1);

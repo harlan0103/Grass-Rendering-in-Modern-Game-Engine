@@ -25,11 +25,18 @@ float4 _Time;
 float _HeightMultiplier;
 float _HeightMapSize;
 
+// Occlusion Culling
+uint _DepthTexSize;
+float _OccludHeightOffset;
+
 Texture2D WindTex;
 SamplerState samplerWindTex;
 
 Texture2D HeightTex;
 SamplerState samplerHeightTex;
+
+Texture2D DepthTex;
+SamplerState samplerDepthTex;
 
 float Clamp(float min, float max, float target)
 {
@@ -82,6 +89,36 @@ uint FrustumCulling(float4 clippingPos)
     }
 }
 
+uint OcclusionCulling(float4 clippingPos)
+{
+    // Transfer grass position from clipping to NDC
+    float3 ndcPosition = clippingPos.xyz / clippingPos.w;
+    
+    // Transfer to uv coordinate
+    float2 uvPosition = float2(ndcPosition.x, ndcPosition.y) * 0.5f + 0.5f;
+    
+    // Use maximum mipmap level
+    uint mipmapLevel = log2(_DepthTexSize) - 1;
+    uint size = _DepthTexSize / (1 << mipmapLevel);
+    
+    // Calculate the pixel position
+    uint2 pixelPosition = uint2(clamp(uvPosition.x * size, 0, size - 1), clamp(uvPosition.y * size, 0, size - 1));
+    
+    // Sample the depth in depth texture
+    float depthInTexture = DepthTex.SampleLevel(samplerDepthTex, uvPosition, 0).r;
+
+    float depth = ndcPosition.z;
+    
+    if (depth > depthInTexture)
+    {
+        return 1;
+    }
+    else
+    {
+        return 0;
+    }
+}
+
 [numthreads(8, 8, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
@@ -111,8 +148,19 @@ void CSMain(uint3 id : SV_DispatchThreadID)
     // Calculate for frustum culling
     float4 clippingSpacePos = mul(_CamClippingMatrix, float4(revisedPos, 1.0));
     uint frustumCulling = FrustumCulling(clippingSpacePos);
+    
+    // Perform the occulusion culling
+    uint positionOcclusionTest = OcclusionCulling(clippingSpacePos);
+    
+    // Only use the balde grass generated location to check depth value will let some artifacts
+    // Espically for the edge of the occluder
+    // So add a second check using a simulated height value
+    float4 clippingSpacePosHeight = mul(_CamClippingMatrix, float4(revisedPos.x, revisedPos.y + _OccludHeightOffset, revisedPos.z, 1.0));
+    uint heightOcclusionTest = OcclusionCulling(clippingSpacePosHeight);
+    
+    uint occlusionCulling = positionOcclusionTest || heightOcclusionTest;
 
-    if (distanceCulling == 1 && frustumCulling == 1)
+    if (distanceCulling == 1 && frustumCulling == 1 && occlusionCulling == 1)
     {
         
         // Sample wind using timed UV coordinate
